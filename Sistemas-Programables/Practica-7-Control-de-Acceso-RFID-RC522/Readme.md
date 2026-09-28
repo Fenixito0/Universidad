@@ -30,7 +30,7 @@ El RC522 va a los pines SPI de la UNO (SCK D13, MISO D12, MOSI D11, SDA/SS
 D10, RST D9) y se alimenta **solo con 3.3 V**: a 5 V se daña. El LED verde va
 en D7 y el rojo en D6, cada uno con su resistencia, y todo comparte tierra.
 
-PENDIENTE: diagrama estilo Tinkercad. Ver [Diagrama/Readme.txt](Diagrama/Readme.txt).
+![Diagrama de conexión](Diagrama/diagrama-conexion-rfid.png)
 
 ## Código
 Al arrancar lee el registro de versión del lector para confirmar que hay
