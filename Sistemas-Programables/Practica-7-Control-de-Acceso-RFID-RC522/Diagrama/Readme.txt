@@ -1,8 +1,6 @@
 Diagrama del circuito.
 
-  diagrama-conexion-rfid.png  - Vista esquematica: Arduino UNO R4 WiFi,
-    lector RC522 por SPI, LED de acceso con resistencia de 470 ohm en D7 y la
-    matriz LED 12x8 integrada.   [LISTO]
+PENDIENTE: diagrama estilo Tinkercad hecho con Claude Design (lo sube Jesus).
 
 Conexion del RC522 (se alimenta con 3.3 V, NUNCA 5 V):
   SDA (SS) -> D10
@@ -14,4 +12,5 @@ Conexion del RC522 (se alimenta con 3.3 V, NUNCA 5 V):
   RST      -> D9
   3.3V     -> 3.3V
 
-LED: D7 -> resistencia 470 ohm -> anodo (pata larga); catodo -> GND.
+LED verde: D7 -> resistencia -> anodo; catodo -> GND  (acceso concedido)
+LED rojo:  D6 -> resistencia -> anodo; catodo -> GND  (acceso denegado)

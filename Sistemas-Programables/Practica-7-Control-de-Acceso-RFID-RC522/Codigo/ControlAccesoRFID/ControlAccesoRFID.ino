@@ -1,171 +1,184 @@
 /*
-  Practica 7 - Control de acceso con RFID RC522 (bus SPI)
-  Arduino UNO R4 WiFi + lector MFRC522 + LED + matriz LED 12x8 integrada
+  Control de acceso RFID con RC522 por SPI
+  Placa: Arduino UNO R4 WiFi
 
-  - Al arrancar verifica si hay comunicacion con el lector (registro VersionReg).
-  - Muestra el UID de cada tarjeta en hexadecimal: "UID: 3A F2 1C 7B".
-  - Si el UID es el autorizado: "ACCESO PERMITIDO", LED encendido 2000 ms (millis()).
-  - Si no: "ACCESO DENEGADO" y el LED no se enciende.
-  - Extra: la matriz LED escribe ACEPTADO / RECHAZADO desplazandose sin bloquear.
-
-  Conexion del RC522 (se alimenta con 3.3 V, NUNCA con 5 V):
-    SDA(SS) -> D10   SCK -> D13   MOSI -> D11   MISO -> D12
-    RST     -> D9    GND -> GND   3.3V -> 3.3V  (IRQ sin conectar)
-  LED: D7 -> resistencia 470 ohm -> LED -> GND
+  LED verde (pin 7)  -> acceso concedido
+  LED rojo  (pin 6)  -> acceso denegado
+  Ambos se apagan solos a los 2000 ms, con millis().
+  La matriz muestra ACEPTADO o RECHAZADO con scroll no bloqueante.
+  El programa nunca se detiene: sigue leyendo tarjetas mientras
+  un LED esta encendido y mientras el texto se desplaza.
 */
 
 #include <SPI.h>
 #include <MFRC522.h>
-#include "ArduinoGraphics.h"      // debe ir antes de Arduino_LED_Matrix.h para poder escribir texto
+#include "ArduinoGraphics.h"
 #include "Arduino_LED_Matrix.h"
 
-const uint8_t RC522_SS  = 10;
-const uint8_t RC522_RST = 9;      // no usar PIN_RST: ese nombre ya existe en el core de la R4
-const uint8_t LED_ACCESO = 7;
+const uint8_t PIN_SS  = 10;
+const uint8_t PIN_RST = 9;
 
-const unsigned long TIEMPO_LED = 2000;    // ms que el LED queda encendido
-const unsigned long PASO_TEXTO = 70;      // ms entre cada desplazamiento del texto en la matriz
-
-// UID de la tarjeta autorizada.
-// PASO 1: carga el programa, acerca la tarjeta y el llavero y anota el UID que imprime el Monitor Serie.
-// PASO 2: escribe aqui los bytes de la tarjeta que elijas como autorizada y vuelve a cargar el programa.
-const byte UID_AUTORIZADO[] = {0x00, 0x00, 0x00, 0x00};
-const byte LARGO_AUTORIZADO = sizeof(UID_AUTORIZADO);
-
-MFRC522 lector(RC522_SS, RC522_RST);
+MFRC522 lector(PIN_SS, PIN_RST);
 ArduinoLEDMatrix matriz;
 
-// LED de acceso
-bool ledEncendido = false;
-unsigned long inicioLed = 0;
-
-// Texto que corre por la matriz
-const char* textoMatriz = nullptr;
-int posTexto = 0;          // columna donde empieza el texto (baja hasta quedar fuera por la izquierda)
-int anchoTexto = 0;
-unsigned long ultimoPaso = 0;
-bool resultadoOk = false;  // para elegir el icono final
-
-// Iconos 12x8 que quedan fijos cuando el texto termina de pasar (sin const: renderBitmap no acepta const)
-uint8_t ICONO_OK[8][12] = {
-  {0,0,0,0,0,0,0,0,0,0,0,0},
-  {0,0,0,0,0,0,0,0,0,0,1,0},
-  {0,0,0,0,0,0,0,0,0,1,0,0},
-  {0,0,0,0,0,0,0,0,1,0,0,0},
-  {0,0,1,0,0,0,0,1,0,0,0,0},
-  {0,0,0,1,0,0,1,0,0,0,0,0},
-  {0,0,0,0,1,1,0,0,0,0,0,0},
-  {0,0,0,0,0,0,0,0,0,0,0,0}
+// ---- Tarjetas autorizadas ----
+const byte AUTORIZADOS[][4] = {
+  { 0x99, 0xEB, 0x7B, 0x63 },   // llavero
+  { 0xAA, 0x25, 0x60, 0xE4 }    // tarjeta
 };
-uint8_t ICONO_NO[8][12] = {
-  {0,0,0,0,0,0,0,0,0,0,0,0},
-  {0,0,0,1,0,0,0,0,1,0,0,0},
-  {0,0,0,0,1,0,0,1,0,0,0,0},
-  {0,0,0,0,0,1,1,0,0,0,0,0},
-  {0,0,0,0,0,1,1,0,0,0,0,0},
-  {0,0,0,0,1,0,0,1,0,0,0,0},
-  {0,0,0,1,0,0,0,0,1,0,0,0},
-  {0,0,0,0,0,0,0,0,0,0,0,0}
+const byte NUM_AUTORIZADOS = sizeof(AUTORIZADOS) / 4;
+
+// ---- LEDs con temporizador propio ----
+const uint32_t T_LED = 2000;
+
+struct Led {
+  uint8_t  pin;
+  bool     prendido;
+  uint32_t t0;
 };
 
-void mostrarTexto(const char* texto, bool ok) {
-  textoMatriz = texto;
-  resultadoOk = ok;
-  posTexto = 12;                          // entra por la derecha
-  anchoTexto = strlen(texto) * 5;         // Font_5x7: 5 columnas por letra
-  ultimoPaso = 0;                         // dibuja el primer cuadro de inmediato
+Led verde = { 7, false, 0 };
+Led rojo  = { 6, false, 0 };
+
+// ---- Scroll no bloqueante en la matriz ----
+char     mensaje[16] = "";
+int      xTexto = 12;
+uint32_t tScroll = 0;
+const uint32_t PASO_SCROLL = 60;
+bool     animando = false;
+
+// ---------------------------------------------------
+
+void prender(Led &l, uint32_t ahora) {
+  digitalWrite(l.pin, HIGH);
+  l.prendido = true;
+  l.t0 = ahora;
 }
 
-void actualizarMatriz() {
-  if (textoMatriz == nullptr) return;
-  if (millis() - ultimoPaso < PASO_TEXTO) return;
-  ultimoPaso = millis();
+void actualizar(Led &l, uint32_t ahora) {
+  if (!l.prendido) return;
+  if (ahora - l.t0 < T_LED) return;
 
-  if (posTexto < -anchoTexto) {           // ya salio por la izquierda: dejar el icono
-    if (resultadoOk) matriz.renderBitmap(ICONO_OK, 8, 12);
-    else             matriz.renderBitmap(ICONO_NO, 8, 12);
-    textoMatriz = nullptr;
-    return;
-  }
-  matriz.clear();
+  digitalWrite(l.pin, LOW);
+  l.prendido = false;
+}
+
+void mostrarEnMatriz(const char* txt) {
+  strncpy(mensaje, txt, sizeof(mensaje) - 1);
+  mensaje[sizeof(mensaje) - 1] = '\0';
+  xTexto   = 12;
+  tScroll  = 0;
+  animando = true;
+}
+
+void animarMatriz(uint32_t ahora) {
+  if (!animando) return;
+  if (ahora - tScroll < PASO_SCROLL) return;
+  tScroll = ahora;
+
   matriz.beginDraw();
+  matriz.clear();
   matriz.stroke(0xFFFFFFFF);
-  matriz.textFont(Font_5x7);
-  matriz.text(textoMatriz, posTexto, 1);
+  matriz.textFont(Font_4x6);
+  matriz.beginText(xTexto, 1, 0xFFFFFF);
+  matriz.print(mensaje);
+  matriz.endText();              // sin SCROLL_LEFT: no bloquea
   matriz.endDraw();
-  posTexto--;
+
+  xTexto--;
+
+  if (xTexto < -(int)(strlen(mensaje) * 5)) {
+    animando = false;
+    matriz.beginDraw();
+    matriz.clear();
+    matriz.endDraw();
+  }
 }
 
-void imprimirUID(const MFRC522::Uid& uid) {
+bool esAutorizado() {
+  if (lector.uid.size != 4) return false;
+
+  for (byte t = 0; t < NUM_AUTORIZADOS; t++) {
+    bool coincide = true;
+
+    for (byte i = 0; i < 4; i++) {
+      if (lector.uid.uidByte[i] != AUTORIZADOS[t][i]) {
+        coincide = false;
+        break;
+      }
+    }
+
+    if (coincide) return true;
+  }
+  return false;
+}
+
+void imprimirUID() {
   Serial.print("UID:");
-  for (byte i = 0; i < uid.size; i++) {
-    Serial.print(' ');
-    if (uid.uidByte[i] < 0x10) Serial.print('0');   // 0x0A -> "0A", siempre 2 digitos
-    Serial.print(uid.uidByte[i], HEX);
+  for (byte i = 0; i < lector.uid.size; i++) {
+    Serial.print(lector.uid.uidByte[i] < 0x10 ? " 0" : " ");
+    Serial.print(lector.uid.uidByte[i], HEX);
   }
   Serial.println();
 }
 
-bool esAutorizado(const MFRC522::Uid& uid) {
-  if (uid.size != LARGO_AUTORIZADO) return false;
-  for (byte i = 0; i < uid.size; i++) {
-    if (uid.uidByte[i] != UID_AUTORIZADO[i]) return false;
+void leerTarjeta(uint32_t ahora) {
+  if (!lector.PICC_IsNewCardPresent()) return;
+  if (!lector.PICC_ReadCardSerial())   return;
+
+  imprimirUID();
+
+  if (esAutorizado()) {
+    Serial.println("ACCESO CONCEDIDO");
+    prender(verde, ahora);
+    mostrarEnMatriz("ACEPTADO");
+  } else {
+    Serial.println("ACCESO DENEGADO");
+    prender(rojo, ahora);
+    mostrarEnMatriz("RECHAZADO");
   }
-  return true;
+
+  Serial.println();
+  lector.PICC_HaltA();
+  lector.PCD_StopCrypto1();
 }
+
+// ---------------------------------------------------
 
 void setup() {
   Serial.begin(9600);
-  while (!Serial && millis() < 3000) { }  // la R4 usa USB nativo: esperar a que abra el Monitor Serie
+  while (!Serial && millis() < 3000);
 
-  pinMode(LED_ACCESO, OUTPUT);
-  digitalWrite(LED_ACCESO, LOW);
+  pinMode(verde.pin, OUTPUT);
+  pinMode(rojo.pin,  OUTPUT);
+  digitalWrite(verde.pin, LOW);
+  digitalWrite(rojo.pin,  LOW);
+
   matriz.begin();
 
   SPI.begin();
   lector.PCD_Init();
-  delay(50);                              // solo en setup: el lector tarda en arrancar
+  delay(50);                     // unico delay, solo en el arranque
 
   byte version = lector.PCD_ReadRegister(MFRC522::VersionReg);
+
   if (version == 0x00 || version == 0xFF) {
-    Serial.println("ERROR: no hay comunicacion con el lector RC522.");
-    Serial.println("Revisa el cableado (MISO D12, MOSI D11, SCK D13, SDA D10, RST D9) y que este en 3.3 V.");
-    mostrarTexto("SIN LECTOR", false);
+    Serial.println("ERROR: no hay comunicacion con el RC522");
+    Serial.println("Revisa el cableado SPI y que este a 3.3 V");
   } else {
-    Serial.print("Lector RC522 detectado, version 0x");
+    Serial.print("RC522 detectado. Version del firmware: 0x");
     Serial.println(version, HEX);
+    Serial.print("Tarjetas autorizadas: ");
+    Serial.println(NUM_AUTORIZADOS);
     Serial.println("Acerca una tarjeta...");
-    mostrarTexto("LISTO", true);
   }
 }
 
 void loop() {
-  // 1) Apagar el LED cuando se cumplen los 2000 ms, sin detener nada mas
-  if (ledEncendido && millis() - inicioLed >= TIEMPO_LED) {
-    digitalWrite(LED_ACCESO, LOW);
-    ledEncendido = false;
-  }
+  uint32_t ahora = millis();
 
-  // 2) Avanzar un paso el texto de la matriz
-  actualizarMatriz();
-
-  // 3) Leer tarjetas (tambien mientras el LED esta encendido)
-  if (!lector.PICC_IsNewCardPresent()) return;
-  if (!lector.PICC_ReadCardSerial()) return;
-
-  imprimirUID(lector.uid);
-
-  if (esAutorizado(lector.uid)) {
-    Serial.println("ACCESO PERMITIDO");
-    digitalWrite(LED_ACCESO, HIGH);
-    ledEncendido = true;
-    inicioLed = millis();                 // si se vuelve a pasar la tarjeta, el conteo reinicia
-    mostrarTexto("ACEPTADO", true);
-  } else {
-    Serial.println("ACCESO DENEGADO");
-    mostrarTexto("RECHAZADO", false);     // el LED no se toca: si estaba encendido sigue su conteo
-  }
-
-  lector.PICC_HaltA();                    // la misma tarjeta no se vuelve a leer hasta retirarla
-  lector.PCD_StopCrypto1();
+  animarMatriz(ahora);       // el texto avanza a su ritmo
+  actualizar(verde, ahora);  // cada LED cuenta su propio tiempo
+  actualizar(rojo,  ahora);
+  leerTarjeta(ahora);        // siempre atento, nunca bloqueado
 }
