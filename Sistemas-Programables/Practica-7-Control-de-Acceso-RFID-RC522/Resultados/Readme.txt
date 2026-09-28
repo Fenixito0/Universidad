@@ -7,10 +7,10 @@ esqueleto del repo.
 
 PENDIENTE: hacer las 4 pruebas de la consigna con el circuito armado y
 anotar lo observado en el Readme:
-  1. Tarjeta autorizada: el LED enciende y se apaga solo a los 2 s.
-  2. Tarjeta no autorizada: el LED no enciende.
+  1. Tarjeta autorizada: el LED verde enciende y se apaga solo a los 2 s.
+  2. Tarjeta no autorizada: el verde no enciende (enciende el rojo 2 s).
   3. Con el LED encendido, acercar la no autorizada: debe salir
      "ACCESO DENEGADO" (el programa no se queda bloqueado).
   4. Desconectar MISO (D12) y reiniciar: debe salir el mensaje de error de
      comunicacion; volver a conectarlo.
-Anotar tambien el UID de la tarjeta y del llavero.
+UIDs ya leidos: llavero 99 EB 7B 63, tarjeta AA 25 60 E4 (ambos autorizados en el codigo).
