@@ -32,20 +32,6 @@ en D7 y el rojo en D6, cada uno con su resistencia, y todo comparte tierra.
 
 ![Diagrama de conexión](Diagrama/diagrama-conexion-rfid.png)
 
-**Preguntas del bus SPI**
-- **SCK, MOSI, MISO y CS:** SCK (*Serial Clock*) es el reloj que marca cada bit; MOSI
-  (*Master Out Slave In*) lleva datos del Arduino al lector; MISO (*Master In Slave
-  Out*) los trae del lector al Arduino; CS (*Chip Select*, o SS) activa en LOW al
-  dispositivo con el que se quiere hablar.
-- **¿Por qué el pin dice "SDA"?** El chip MFRC522 también puede usar I2C o UART y el
-  módulo rotula el pin con su nombre de I2C. En SPI ese pin funciona como **SS/CS**
-  (D10): selecciona al lector.
-- **¿Por qué línea viaja el UID?** Por **MISO** (D12), la única que va del lector al
-  Arduino.
-- **Segundo lector RC522:** compartiría SCK, MOSI, MISO, 3.3V y GND; lo que cambia es
-  el **SS/CS** (por ejemplo D8), para elegir con cuál lector hablar. RST puede
-  compartirse o ir a otro pin.
-
 ## Código
 Al arrancar lee el registro de versión del lector para confirmar que hay
 comunicación. Cada tarjeta nueva imprime `UID: 3A F2 1C 7B` y se compara con
@@ -53,28 +39,18 @@ la lista de autorizadas; cada LED tiene su propio temporizador con `millis()`
 y el texto de la matriz avanza una columna cada 60 ms, así que nada bloquea
 la lectura. UIDs y librerías en [Codigo/Readme.txt](Codigo/Readme.txt).
 
-**¿Por qué no se permitió `delay()`?** Porque congela todo el programa: con un
-`delay(2000)` para el LED, el Arduino no leería tarjetas ni movería el texto de la
-matriz durante esos 2 s, y la prueba 3 (tarjeta no autorizada con el LED encendido)
-fallaría. Con `millis()` solo se revisa si ya pasó el tiempo y el `loop()` sigue.
-
 [Ver código](Codigo/)
 
 ## Reporte
 El reporte contiene la metodología (bus SPI, lectura del UID, control de
 acceso sin bloqueo y texto en la matriz), las conexiones, el diagrama, las
-pruebas y las conclusiones técnicas.
+pruebas, las respuestas a las preguntas de la práctica y las conclusiones
+técnicas.
 
 [Ver Reporte](Reporte/Reporte-Control-de-Acceso-RFID.pdf)
 
 ## Resultados
 UIDs leídos: llavero `99 EB 7B 63` y tarjeta `AA 25 60 E4`.
-
-**¿Qué pasó al desconectar MISO?** Al reiniciar, el Monitor Serie mostró
-`ERROR: no hay comunicacion con el RC522`. Sin MISO la respuesta del lector nunca
-llega: al leer el registro de versión el Arduino obtiene 0x00 o 0xFF en lugar de
-0x91/0x92, y por eso detecta que no hay comunicación; tampoco puede leer ningún UID.
-Al reconectar el cable y reiniciar, el lector vuelve a detectarse.
 
 PENDIENTE: capturas del Monitor Serie y resultado de las 4 pruebas. Ver
 [Resultados/Readme.txt](Resultados/Readme.txt).
