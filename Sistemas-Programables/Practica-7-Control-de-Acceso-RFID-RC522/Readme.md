@@ -56,7 +56,10 @@ PENDIENTE: capturas del Monitor Serie y resultado de las 4 pruebas. Ver
 [Resultados/Readme.txt](Resultados/Readme.txt).
 
 ## Video
-PENDIENTE: [Ver carpeta Video](Video/)
+El video muestra el montaje (UNO R4 WiFi, RC522 y LEDs), el código y el
+lector respondiendo al acercar la tarjeta y el llavero.
+
+[Ver video](https://youtube.com/shorts/upVnyrU8YVg) · [Ver carpeta Video](Video/)
 
 ## Conclusiones
 El bus SPI permite hablar con el lector usando cuatro líneas compartidas y
