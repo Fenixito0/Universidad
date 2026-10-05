@@ -42,15 +42,17 @@ reintenta cada 5 s. Detalles en [Codigo/Readme.txt](Codigo/Readme.txt).
 [Ver código](Codigo/)
 
 ## Reporte
-PENDIENTE: reporte con la metodología (bus I2C, Chip ID, configuración del
-sensor, temporización con `millis()`), conexiones, diagrama, pruebas y
-conclusiones.
+El reporte contiene la metodología (bus I2C, detección por Chip ID,
+configuración del sensor, cálculo de la altitud y tareas con `millis()`), las
+conexiones, el diagrama, los resultados y las conclusiones.
 
-[Ver carpeta Reporte](Reporte/)
+[Ver Reporte](Reporte/Reporte-Sensor-Ambiental-BMP280.pdf)
 
 ## Resultados
-PENDIENTE: lecturas reales del sensor, gráfica del Serial Plotter y prueba
-de desconexión. Ver [Resultados/Readme.txt](Resultados/Readme.txt).
+La matriz LED alternó entre **25C** y **14m** cada 2.5 s, sin mostrar `ERR`:
+el sensor respondió por I2C como BMP280. Con la referencia de 1005 hPa, 14 m
+equivalen a una presión de unos 1003 hPa, coherente con estar casi al nivel
+del mar en Mazatlán.
 
 ## Video
 PENDIENTE: video del montaje y la matriz alternando temperatura y altitud.
@@ -58,4 +60,8 @@ PENDIENTE: video del montaje y la matriz alternando temperatura y altitud.
 [Ver carpeta Video](Video/)
 
 ## Conclusiones
-PENDIENTE: se redactan después de probar el circuito armado.
+Leer el Chip ID antes de usar la librería distingue un sensor ausente de uno
+de otro modelo (BMP280 contra BME280). La altitud no se mide: se calcula con
+la presión de referencia, y 1 hPa de error en `SEALEVEL_HPA` la mueve unos
+8 m. Como en las prácticas anteriores, `millis()` permite que la lectura, la
+matriz y los reintentos convivan sin bloquearse.

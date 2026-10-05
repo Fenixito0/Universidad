@@ -5,9 +5,6 @@ Desde el 19-sep-2026 los resultados van escritos directo en la seccion
 un glosario, no biblia"). Esta carpeta se deja por consistencia con el
 esqueleto del repo.
 
-PENDIENTE: con el circuito armado, anotar en el Readme:
-  1. Direccion y Chip ID detectados (0x76/0x77, 0x58 o 0x60).
-  2. Lecturas tipicas de temperatura, presion y altitud.
-  3. Grafica del Serial Plotter (soplar o tocar el sensor y ver la curva).
-  4. Desconectar SDA o SCL: debe salir "ERR" y reintentar cada 5 s;
-     al reconectar, vuelve solo.
+Observado con el circuito armado: la matriz alterno entre 25C y 14m cada
+2.5 s, sin ERR (el sensor es un BMP280, Chip ID 0x58). 14 m con referencia
+de 1005 hPa = ~1003.3 hPa medidos (calculado, no leido directo).
