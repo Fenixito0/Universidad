@@ -26,11 +26,11 @@ sin `delay()`.
 - Arduino IDE, Monitor Serie y Serial Plotter (115200 baudios)
 
 ## Diagrama
-El sensor se alimenta con **3.3 V** y va a los pines SDA y SCL de la UNO
-(equivalentes a A4 y A5); GND común. Opcional: CSB a VCC y SDO a GND fija la
-dirección 0x76.
+El sensor se alimenta con **3.3 V** y su bus I2C va a A4 (SDA) y A5 (SCL) de
+la UNO, con GND común. CSB y SDO quedan sin conectar, así que responde en la
+dirección 0x77 (0x76 si SDO va a GND).
 
-PENDIENTE: diagrama de conexión. Ver [Diagrama/Readme.txt](Diagrama/Readme.txt).
+![Diagrama de conexión](Diagrama/diagrama-conexion-bme280-i2c.png)
 
 ## Código
 Al arrancar busca el sensor en 0x76 y 0x77 leyendo su registro de Chip ID;
