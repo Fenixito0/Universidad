@@ -55,9 +55,10 @@ equivalen a una presión de unos 1003 hPa, coherente con estar casi al nivel
 del mar en Mazatlán.
 
 ## Video
-PENDIENTE: video del montaje y la matriz alternando temperatura y altitud.
+El video muestra el montaje (UNO R4 WiFi y sensor por I2C) y la matriz LED
+alternando la temperatura y la altitud.
 
-[Ver carpeta Video](Video/)
+[Ver video](https://youtube.com/shorts/xh9_x83SPzs) · [Ver carpeta Video](Video/)
 
 ## Conclusiones
 Leer el Chip ID antes de usar la librería distingue un sensor ausente de uno
