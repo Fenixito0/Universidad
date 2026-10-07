@@ -23,6 +23,7 @@ sube o baja con la inclinación.
 - Módulo MPU-6050 (GY-521)
 - Driver L298N y motorreductor DC
 - Batería LiPo 3S (11.1 V) para el motor
+- Resistencia de 10 kΩ entre ENA y GND (motor deshabilitado al arrancar)
 - Cables y protoboard
 - Librerías `Wire` y `Arduino_LED_Matrix` (vienen con el core de la R4; el
   MPU-6050 se lee por registros, sin librería externa)
@@ -36,10 +37,13 @@ motor a OUT1/OUT2.
 ![Diagrama de conexión](Diagrama/diagrama-conexion-imu-motor.png)
 
 ## Código
-Arranca con el motor apagado, verifica `WHO_AM_I`, configura ±2 g / ±250 °/s,
-calibra el giroscopio con 500 lecturas y toma el ángulo inicial del
-acelerómetro. En el `loop()` corren: sensor y filtro (10 ms), rampa y motor
-(20 ms), Monitor Serie solo si algo cambia (500 ms) y matriz LED (50 ms).
+`Inclinometro_Motor_R4.ino`: arranca con las salidas del motor en BAJO,
+verifica `WHO_AM_I`, configura ±2 g / ±250 °/s (filtro interno 44 Hz, 100
+muestras/s), calibra el giroscopio con 500 lecturas y toma el ángulo inicial
+del acelerómetro. Cuatro estados (BLOQUEADO, ACTIVO, PARO, RECUPERANDO) y
+cuatro tareas: sensor y filtro (10 ms), rampa y motor (20 ms), Monitor Serie
+solo si algo cambia (500 ms) y matriz LED (50 ms). En una falla reintenta el
+sensor cada 250 ms.
 Detalles en [Codigo/Readme.txt](Codigo/Readme.txt).
 
 [Ver código](Codigo/)
@@ -52,15 +56,19 @@ preguntas de análisis y conclusiones.
 [Ver Reporte](Reporte/Reporte-Inclinometro-IMU-Motorreductor.pdf)
 
 ## Resultados
-PENDIENTE: probar en el circuito armado. Lo que se debe observar: motor quieto
-dentro de ±5°, adelante al inclinar hacia adelante y en reversa hacia atrás,
-más rápido mientras más inclinado; al invertir, frena antes de cambiar de
-sentido; al desconectar SDA o SCL, "PARO DE SEGURIDAD" y X en la matriz.
+El motor siguió la inclinación: adelante de 44 % (10°) a 100 % (desde ~40°),
+en reversa de 32 % (−8°) a 100 % (−45° o más), y detenido en el centro con
+"ENTRA AL CENTRO" / "SALE DEL CENTRO". La rampa se nota en el Monitor Serie:
+al pasar de −56° a +6° el motor sigue "reversa 58 %" mientras frena antes de
+invertir.
+
+![Monitor Serie](Terminal/monitor-serie-inclinacion-y-motor.png)
 
 ## Video
-PENDIENTE: video del funcionamiento.
+El video muestra el código y el Monitor Serie, y el motorreductor cambiando de
+sentido y velocidad al inclinar el MPU-6050.
 
-[Ver carpeta Video](Video/)
+[Ver video](https://youtu.be/_UTnJtDEshI) · [Ver carpeta Video](Video/)
 
 ## Conclusiones
 Ni el acelerómetro (ruidoso con las sacudidas) ni el giroscopio (con deriva)
