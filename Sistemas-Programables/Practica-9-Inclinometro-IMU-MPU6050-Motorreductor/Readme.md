@@ -62,8 +62,6 @@ en reversa de 32 % (−8°) a 100 % (−45° o más), y detenido en el centro co
 al pasar de −56° a +6° el motor sigue "reversa 58 %" mientras frena antes de
 invertir.
 
-![Monitor Serie](Terminal/monitor-serie-inclinacion-y-motor.png)
-
 ## Video
 El video muestra el código y el Monitor Serie, y el motorreductor cambiando de
 sentido y velocidad al inclinar el MPU-6050.
